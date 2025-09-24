@@ -1,0 +1,174 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* AI BUDDY Futuristic Design System - All colors MUST be HSL */
+
+@layer base {
+  :root {
+    /* Cosmic Background System */
+    --background: 222 47% 7%;
+    --foreground: 210 100% 98%;
+
+    /* Glass Cards with Depth */
+    --card: 222 47% 9%;
+    --card-foreground: 210 100% 98%;
+
+    /* Floating Elements */
+    --popover: 222 47% 9%;
+    --popover-foreground: 210 100% 98%;
+
+    /* Electric Primary - Cyan Glow */
+    --primary: 191 100% 55%;
+    --primary-foreground: 222 47% 7%;
+
+    /* Neon Secondary - Purple */
+    --secondary: 271 76% 53%;
+    --secondary-foreground: 210 100% 98%;
+
+    /* Subtle Tech Muted */
+    --muted: 222 47% 12%;
+    --muted-foreground: 215 25% 65%;
+
+    /* Accent - Electric Green */
+    --accent: 142 76% 55%;
+    --accent-foreground: 222 47% 7%;
+
+    /* Danger - Electric Red */
+    --destructive: 0 76% 55%;
+    --destructive-foreground: 210 100% 98%;
+
+    /* Glowing Borders */
+    --border: 222 47% 15%;
+    --input: 222 47% 12%;
+    --ring: 191 100% 55%;
+
+    /* Advanced Gradients */
+    --gradient-cosmic: linear-gradient(135deg, hsl(222 47% 7%), hsl(271 47% 12%));
+    --gradient-electric: linear-gradient(135deg, hsl(191 100% 55%), hsl(271 76% 53%));
+    --gradient-glow: linear-gradient(135deg, hsl(191 100% 55% / 0.3), hsl(271 76% 53% / 0.3));
+    --gradient-card: linear-gradient(135deg, hsl(222 47% 9% / 0.8), hsl(271 47% 12% / 0.6));
+
+    /* Glowing Shadows */
+    --shadow-glow: 0 0 40px hsl(191 100% 55% / 0.4);
+    --shadow-purple-glow: 0 0 40px hsl(271 76% 53% / 0.4);
+    --shadow-green-glow: 0 0 40px hsl(142 76% 55% / 0.4);
+    --shadow-deep: 0 25px 50px -12px hsl(222 47% 7% / 0.8);
+
+    /* Smooth Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-glow: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .light {
+    /* Light mode uses same cosmic theme with adjusted contrast */
+    --background: 210 100% 98%;
+    --foreground: 222 47% 12%;
+    --card: 210 100% 100%;
+    --card-foreground: 222 47% 12%;
+    --border: 215 25% 85%;
+    --input: 215 25% 90%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-gradient-to-br from-background via-background to-muted text-foreground overflow-x-hidden;
+    background-attachment: fixed;
+  }
+  
+  /* Futuristic scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary));
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--accent));
+  }
+}
+
+@layer components {
+  /* Glowing Effects */
+  .glow-primary {
+    box-shadow: var(--shadow-glow);
+    transition: var(--transition-glow);
+  }
+  
+  .glow-primary:hover {
+    box-shadow: 0 0 60px hsl(var(--primary) / 0.6);
+  }
+  
+  .glow-purple {
+    box-shadow: var(--shadow-purple-glow);
+  }
+  
+  .glow-green {
+    box-shadow: var(--shadow-green-glow);
+  }
+  
+  /* Glass Morphism */
+  .glass {
+    background: var(--gradient-card);
+    backdrop-filter: blur(20px);
+    border: 1px solid hsl(var(--border));
+  }
+  
+  /* Floating Animation */
+  .float {
+    animation: float 6s ease-in-out infinite;
+  }
+  
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+  
+  /* Pulse Glow */
+  .pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite alternate;
+  }
+  
+  @keyframes pulse-glow {
+    from { box-shadow: 0 0 20px hsl(var(--primary) / 0.3); }
+    to { box-shadow: 0 0 40px hsl(var(--primary) / 0.6); }
+  }
+  
+  /* Tech Grid Background */
+  .tech-grid {
+    background-image: 
+      linear-gradient(hsl(var(--primary) / 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--primary) / 0.1) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+}
