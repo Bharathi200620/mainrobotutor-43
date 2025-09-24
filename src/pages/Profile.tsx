@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,9 +7,16 @@ import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Trophy, Star, Brain, Zap, Target, User, Phone, School, GraduationCap, Mail } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { AuthForm } from "@/components/AuthForm";
 
 const Profile = () => {
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
   const [profileData, setProfileData] = useState({
     name: "",
     email: "",
@@ -36,12 +43,166 @@ const Profile = () => {
     { grade: 10, completed: 0, total: 0, percentage: 0 },
   ]);
 
+  useEffect(() => {
+    if (user) {
+      loadUserProfile();
+      loadUserProgress();
+      loadUserBadges();
+    }
+  }, [user]);
+
+  const loadUserProfile = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      
+      if (data) {
+        setProfileData({
+          name: data.name || "",
+          email: data.email || "",
+          phone: data.phone || "",
+          school: data.school || "",
+          grade: data.grade || "",
+        });
+        setUserStats(prev => ({
+          ...prev,
+          level: data.level || "Getting Started",
+          points: data.points || 0,
+          streak: data.streak || 0,
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading profile:', error);
+    }
+  };
+
+  const loadUserProgress = async () => {
+    try {
+      // Get total progress stats
+      const { data: progressData, error: progressError } = await supabase
+        .from('user_progress')
+        .select('*, sdg_problems(grade)')
+        .eq('user_id', user?.id);
+
+      if (progressError) throw progressError;
+
+      // Calculate stats
+      const completedQuizzes = progressData?.filter(p => p.completed).length || 0;
+      const totalAttempts = progressData?.reduce((sum, p) => sum + p.attempts, 0) || 0;
+      const correctAnswers = progressData?.reduce((sum, p) => sum + p.score, 0) || 0;
+
+      setUserStats(prev => ({
+        ...prev,
+        totalQuizzes: completedQuizzes,
+        correctAnswers,
+        totalQuestions: totalAttempts,
+      }));
+
+      // Calculate grade-wise progress
+      const gradeStats = [6, 7, 8, 9, 10].map(grade => {
+        const gradeProblems = progressData?.filter(p => p.sdg_problems?.grade === grade) || [];
+        const completed = gradeProblems.filter(p => p.completed).length;
+        const total = gradeProblems.length;
+        return {
+          grade,
+          completed,
+          total,
+          percentage: total > 0 ? Math.round((completed / total) * 100) : 0
+        };
+      });
+
+      setGradeProgress(gradeStats);
+    } catch (error) {
+      console.error('Error loading progress:', error);
+    }
+  };
+
+  const loadUserBadges = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('user_badges')
+        .select('*')
+        .eq('user_id', user?.id);
+
+      if (error) throw error;
+
+      const badges = data?.map(badge => ({
+        icon: badge.badge_icon,
+        name: badge.badge_name,
+        description: badge.badge_description
+      })) || [];
+
+      setUserStats(prev => ({
+        ...prev,
+        badges
+      }));
+    } catch (error) {
+      console.error('Error loading badges:', error);
+    }
+  };
+
   const handleInputChange = (field: string, value: string) => {
     setProfileData(prev => ({
       ...prev,
       [field]: value
     }));
   };
+
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          name: profileData.name,
+          email: profileData.email,
+          phone: profileData.phone,
+          school: profileData.school,
+          grade: profileData.grade,
+        })
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Profile saved!",
+        description: "Your profile has been updated successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error saving profile",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-cosmic tech-grid flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-2xl font-bold">Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-cosmic tech-grid flex items-center justify-center p-4">
+        <AuthForm onAuthSuccess={() => window.location.reload()} />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-cosmic tech-grid">
@@ -141,8 +302,13 @@ const Profile = () => {
             </div>
             
             <div className="flex justify-center pt-4">
-              <Button variant="neon" className="px-8">
-                Save Profile
+              <Button 
+                variant="neon" 
+                className="px-8" 
+                onClick={handleSaveProfile}
+                disabled={loading}
+              >
+                {loading ? "Saving..." : "Save Profile"}
               </Button>
             </div>
           </CardContent>

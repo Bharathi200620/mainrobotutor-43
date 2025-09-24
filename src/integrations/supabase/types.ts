@@ -14,7 +14,164 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          grade: string | null
+          id: string
+          level: string | null
+          name: string | null
+          phone: string | null
+          points: number | null
+          school: string | null
+          streak: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          grade?: string | null
+          id?: string
+          level?: string | null
+          name?: string | null
+          phone?: string | null
+          points?: number | null
+          school?: string | null
+          streak?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          grade?: string | null
+          id?: string
+          level?: string | null
+          name?: string | null
+          phone?: string | null
+          points?: number | null
+          school?: string | null
+          streak?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      sdg_problems: {
+        Row: {
+          content: string
+          created_at: string | null
+          description: string
+          difficulty: string | null
+          grade: number
+          id: string
+          points: number | null
+          questions: Json
+          sdg_goal: number
+          sdg_title: string
+          title: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          description: string
+          difficulty?: string | null
+          grade: number
+          id?: string
+          points?: number | null
+          questions: Json
+          sdg_goal: number
+          sdg_title: string
+          title: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          description?: string
+          difficulty?: string | null
+          grade?: number
+          id?: string
+          points?: number | null
+          questions?: Json
+          sdg_goal?: number
+          sdg_title?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      user_badges: {
+        Row: {
+          badge_description: string
+          badge_icon: string
+          badge_name: string
+          earned_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          badge_description: string
+          badge_icon: string
+          badge_name: string
+          earned_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          badge_description?: string
+          badge_icon?: string
+          badge_name?: string
+          earned_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_progress: {
+        Row: {
+          attempts: number | null
+          completed: boolean | null
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          problem_id: string
+          score: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          attempts?: number | null
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          problem_id: string
+          score?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          attempts?: number | null
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          problem_id?: string
+          score?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_progress_problem_id_fkey"
+            columns: ["problem_id"]
+            isOneToOne: false
+            referencedRelation: "sdg_problems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

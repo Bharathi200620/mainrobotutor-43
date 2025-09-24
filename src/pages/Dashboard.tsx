@@ -5,10 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import RobotTeacher from "@/components/RobotTeacher";
 import Chatbot from "@/components/Chatbot";
-import { User, Target, LogOut, Trophy, Brain, Zap, BookOpen } from "lucide-react";
+import { User, Target, LogOut, Trophy, Brain, Zap, BookOpen, Puzzle } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { AuthForm } from "@/components/AuthForm";
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { user, loading: authLoading, signOut } = useAuth();
   const [selectedGrade, setSelectedGrade] = useState<number | null>(null);
 
   const grades = [
@@ -55,9 +58,28 @@ const Dashboard = () => {
     { name: "Hard", icon: "🔴", description: "Advanced challenges" },
   ];
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await signOut();
     navigate("/");
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-cosmic tech-grid flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-2xl font-bold">Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-cosmic tech-grid flex items-center justify-center p-4">
+        <AuthForm onAuthSuccess={() => window.location.reload()} />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-cosmic tech-grid">
@@ -79,6 +101,10 @@ const Dashboard = () => {
             <Button variant="glass" size="sm" className="gap-2" onClick={() => navigate("/missions")}>
               <Target className="w-4 h-4" />
               🎯 SDG Missions
+            </Button>
+            <Button variant="glass" size="sm" className="gap-2" onClick={() => navigate("/problems")}>
+              <Puzzle className="w-4 h-4" />
+              🧩 Problems
             </Button>
             <Button onClick={handleLogout} variant="ghost" size="sm" className="gap-2">
               <LogOut className="w-4 h-4" />

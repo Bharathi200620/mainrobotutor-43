@@ -1,22 +1,29 @@
-import { useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import robotTeacher from "@/assets/robot-teacher.png";
+import { useAuth } from "@/hooks/useAuth";
+import { AuthForm } from "@/components/AuthForm";
 
 const Login = () => {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
   const navigate = useNavigate();
+  const { user, loading } = useAuth();
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (username && password) {
+  useEffect(() => {
+    if (user) {
       navigate("/dashboard");
     }
-  };
+  }, [user, navigate]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-cosmic tech-grid flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-2xl font-bold">Loading...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-cosmic tech-grid flex items-center justify-center p-4 relative overflow-hidden">
@@ -56,47 +63,8 @@ const Login = () => {
         </CardHeader>
 
         <CardContent className="space-y-6">
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="username" className="text-foreground font-medium">
-                Username
-              </Label>
-              <Input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="glass border-primary/30 focus:border-primary focus:shadow-glow transition-all"
-                placeholder="Enter your username"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-foreground font-medium">
-                Password
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="glass border-primary/30 focus:border-primary focus:shadow-glow transition-all"
-                placeholder="Enter your password"
-                required
-              />
-            </div>
-
-            <Button 
-              type="submit" 
-              variant="hero" 
-              size="lg" 
-              className="w-full mt-6 font-semibold text-lg"
-            >
-              Enter AI World 🚀
-            </Button>
-          </form>
-
+          <AuthForm onAuthSuccess={() => navigate("/dashboard")} />
+          
           <div className="text-center text-sm text-muted-foreground">
             Ready to explore the future of learning?
           </div>
