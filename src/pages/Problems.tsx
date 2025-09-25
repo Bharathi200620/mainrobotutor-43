@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, Target, BookOpen, Trophy, Clock, Brain } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { ArrowLeft, Target, BookOpen, Trophy, Clock, Brain, Send, Lightbulb } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -38,6 +39,10 @@ const Problems = () => {
   const [userProgress, setUserProgress] = useState<UserProgress[]>([]);
   const [selectedGrade, setSelectedGrade] = useState<number>(6);
   const [loading, setLoading] = useState(false);
+  const [selectedProblem, setSelectedProblem] = useState<SDGProblem | null>(null);
+  const [userSolution, setUserSolution] = useState("");
+  const [aiExplanation, setAiExplanation] = useState("");
+  const [submittingAnswer, setSubmittingAnswer] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -79,21 +84,89 @@ const Problems = () => {
     return userProgress.find(p => p.problem_id === problemId);
   };
 
-  const startProblem = async (problem: SDGProblem) => {
-    setLoading(true);
-    try {
-      // Store current problem in session storage for the quiz page
-      sessionStorage.setItem('currentProblem', JSON.stringify(problem));
-      navigate('/quiz');
-    } catch (error) {
+  const startProblem = (problem: SDGProblem) => {
+    setSelectedProblem(problem);
+    setUserSolution("");
+    setAiExplanation("");
+  };
+
+  const submitSolution = async () => {
+    if (!selectedProblem || !userSolution.trim()) {
       toast({
         title: "Error",
-        description: "Failed to start the problem. Please try again.",
+        description: "Please enter your solution before submitting.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSubmittingAnswer(true);
+    try {
+      // Prepare the message for AI
+      const message = `Problem: ${selectedProblem.title}
+      
+Description: ${selectedProblem.description}
+
+Content: ${selectedProblem.content}
+
+Student's Solution: ${userSolution}
+
+Please provide detailed feedback on the student's solution and explain the correct approach to solving this SDG problem. Include:
+1. Assessment of their solution
+2. Step-by-step explanation of the correct approach
+3. Key concepts they should understand
+4. Real-world applications`;
+
+      const { data: functionData, error: functionError } = await supabase.functions.invoke('ai', {
+        body: { message }
+      });
+
+      if (functionError) {
+        throw new Error(functionError.message || "Failed to get AI response");
+      }
+
+      const explanation = functionData?.response;
+      setAiExplanation(explanation);
+
+      // Update user progress
+      const { error: progressError } = await supabase
+        .from('user_progress')
+        .upsert({
+          user_id: user?.id,
+          problem_id: selectedProblem.id,
+          completed: true,
+          score: 85, // You can implement a more sophisticated scoring system
+          attempts: 1
+        });
+
+      if (progressError) {
+        console.error('Error updating progress:', progressError);
+      } else {
+        // Reload progress to update UI
+        loadUserProgress();
+      }
+
+      toast({
+        title: "Solution Submitted!",
+        description: "Check the explanation below to learn more.",
+      });
+
+    } catch (error) {
+      console.error('Error submitting solution:', error);
+      toast({
+        title: "Error",
+        description: "Failed to submit solution. Please try again.",
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setSubmittingAnswer(false);
     }
+  };
+
+  const closeProblem = () => {
+    setSelectedProblem(null);
+    setUserSolution("");
+    setAiExplanation("");
   };
 
   const getDifficultyColor = (difficulty: string) => {
@@ -129,147 +202,230 @@ const Problems = () => {
       <header className="border-b border-primary/20 glass">
         <div className="container mx-auto px-4 py-4 flex items-center gap-4">
           <Button 
-            onClick={() => navigate("/dashboard")} 
+            onClick={selectedProblem ? closeProblem : () => navigate("/dashboard")} 
             variant="glass" 
             size="sm"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to Dashboard
+            {selectedProblem ? "Back to Problems" : "Back to Dashboard"}
           </Button>
           <h1 className="text-2xl md:text-3xl font-bold bg-gradient-electric bg-clip-text text-transparent">
-            🧩 SDG Learning Problems
+            {selectedProblem ? `🎯 ${selectedProblem.title}` : "🧩 SDG Learning Problems"}
           </h1>
         </div>
       </header>
 
       <div className="container mx-auto px-4 py-8 space-y-8">
-        {/* Grade Selection */}
-        <Card variant="neon" className="animate-fade-in">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BookOpen className="w-6 h-6 text-primary" />
-              Select Your Grade Level
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {[6, 7, 8, 9, 10].map((grade) => (
-                <Button
-                  key={grade}
-                  variant={selectedGrade === grade ? "neon" : "glass"}
-                  onClick={() => setSelectedGrade(grade)}
-                  className="min-w-[80px]"
-                >
-                  Grade {grade}
-                </Button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Problems Grid */}
-        <div className="space-y-6">
-          <h2 className="text-xl font-bold">Grade {selectedGrade} SDG Problems</h2>
-          
-          {problems.length === 0 ? (
-            <Card variant="glass">
-              <CardContent className="p-8 text-center">
-                <Brain className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p className="text-muted-foreground">
-                  No problems available for Grade {selectedGrade} yet. Check back soon!
-                </p>
+        {selectedProblem ? (
+          /* Problem Detail View */
+          <div className="space-y-6">
+            {/* Problem Details */}
+            <Card variant="glass" className="animate-fade-in">
+              <CardHeader>
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="secondary" className="bg-primary/20 text-primary">
+                    SDG {selectedProblem.sdg_goal}
+                  </Badge>
+                  <Badge className={getDifficultyColor(selectedProblem.difficulty)}>
+                    {selectedProblem.difficulty}
+                  </Badge>
+                  <Badge variant="outline">{selectedProblem.points} points</Badge>
+                </div>
+                <CardTitle className="text-xl">{selectedProblem.title}</CardTitle>
+                <p className="text-muted-foreground">{selectedProblem.sdg_title}</p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm">{selectedProblem.description}</p>
+                <div className="bg-muted/50 p-4 rounded-lg">
+                  <h4 className="font-semibold mb-2">Problem Details:</h4>
+                  <p className="text-sm">{selectedProblem.content}</p>
+                </div>
               </CardContent>
             </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {problems.map((problem) => {
-                const progress = getProblemProgress(problem.id);
-                return (
-                  <Card key={problem.id} variant="glass" className="hover:shadow-glow transition-all">
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Badge variant="secondary" className="bg-primary/20 text-primary">
-                              SDG {problem.sdg_goal}
-                            </Badge>
-                            <Badge className={getDifficultyColor(problem.difficulty)}>
-                              {problem.difficulty}
-                            </Badge>
+
+            {/* Solution Input */}
+            <Card variant="glass">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Brain className="w-6 h-6 text-primary" />
+                  Your Solution
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Textarea
+                  placeholder="Type your solution here... Explain your approach, reasoning, and proposed actions to address this SDG problem."
+                  value={userSolution}
+                  onChange={(e) => setUserSolution(e.target.value)}
+                  className="min-h-[150px]"
+                />
+                <Button 
+                  onClick={submitSolution}
+                  disabled={submittingAnswer || !userSolution.trim()}
+                  className="w-full"
+                  variant="hero"
+                >
+                  {submittingAnswer ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                      Getting AI Feedback...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4 mr-2" />
+                      Submit Solution
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* AI Explanation */}
+            {aiExplanation && (
+              <Card variant="neon" className="animate-fade-in">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Lightbulb className="w-6 h-6 text-accent" />
+                    AI Feedback & Explanation
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="prose prose-sm max-w-none text-foreground">
+                    <pre className="whitespace-pre-wrap font-sans">{aiExplanation}</pre>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        ) : (
+          <>
+            {/* Grade Selection */}
+            <Card variant="neon" className="animate-fade-in">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BookOpen className="w-6 h-6 text-primary" />
+                  Select Your Grade Level
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {[6, 7, 8, 9, 10].map((grade) => (
+                    <Button
+                      key={grade}
+                      variant={selectedGrade === grade ? "neon" : "glass"}
+                      onClick={() => setSelectedGrade(grade)}
+                      className="min-w-[80px]"
+                    >
+                      Grade {grade}
+                    </Button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Problems Grid */}
+            <div className="space-y-6">
+              <h2 className="text-xl font-bold">Grade {selectedGrade} SDG Problems</h2>
+              
+              {problems.length === 0 ? (
+                <Card variant="glass">
+                  <CardContent className="p-8 text-center">
+                    <Brain className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-muted-foreground">
+                      No problems available for Grade {selectedGrade} yet. Check back soon!
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {problems.map((problem) => {
+                    const progress = getProblemProgress(problem.id);
+                    return (
+                      <Card key={problem.id} variant="glass" className="hover:shadow-glow transition-all">
+                        <CardHeader>
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Badge variant="secondary" className="bg-primary/20 text-primary">
+                                  SDG {problem.sdg_goal}
+                                </Badge>
+                                <Badge className={getDifficultyColor(problem.difficulty)}>
+                                  {problem.difficulty}
+                                </Badge>
+                              </div>
+                              <CardTitle className="text-lg">{problem.title}</CardTitle>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                {problem.sdg_title}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-lg font-bold text-accent">{problem.points}</div>
+                              <div className="text-xs text-muted-foreground">points</div>
+                            </div>
                           </div>
-                          <CardTitle className="text-lg">{problem.title}</CardTitle>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {problem.sdg_title}
+                        </CardHeader>
+
+                        <CardContent className="space-y-4">
+                          <p className="text-sm text-muted-foreground">
+                            {problem.description}
                           </p>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-lg font-bold text-accent">{problem.points}</div>
-                          <div className="text-xs text-muted-foreground">points</div>
-                        </div>
-                      </div>
-                    </CardHeader>
 
-                    <CardContent className="space-y-4">
-                      <p className="text-sm text-muted-foreground">
-                        {problem.description}
-                      </p>
-
-                      {progress && (
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center text-sm">
-                            <span>Your Progress</span>
-                            <span>
-                              {progress.completed ? "Completed" : `${progress.attempts} attempts`}
-                            </span>
-                          </div>
-                          {progress.completed && (
-                            <div className="flex items-center gap-2 text-sm text-accent">
-                              <Trophy className="w-4 h-4" />
-                              Score: {progress.score}%
+                          {progress && (
+                            <div className="space-y-2">
+                              <div className="flex justify-between items-center text-sm">
+                                <span>Your Progress</span>
+                                <span>
+                                  {progress.completed ? "Completed" : `${progress.attempts} attempts`}
+                                </span>
+                              </div>
+                              {progress.completed && (
+                                <div className="flex items-center gap-2 text-sm text-accent">
+                                  <Trophy className="w-4 h-4" />
+                                  Score: {progress.score}%
+                                </div>
+                              )}
                             </div>
                           )}
-                        </div>
-                      )}
 
-                      <Button 
-                        variant={progress?.completed ? "secondary" : "hero"} 
-                        className="w-full"
-                        onClick={() => startProblem(problem)}
-                        disabled={loading}
-                      >
-                        {progress?.completed ? "Review Problem" : "Start Learning"}
-                      </Button>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                          <Button 
+                            variant={progress?.completed ? "secondary" : "hero"} 
+                            className="w-full"
+                            onClick={() => startProblem(problem)}
+                          >
+                            {progress?.completed ? "Review Problem" : "Start Learning"}
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          )}
-        </div>
 
-        {/* Overall Progress */}
-        <Card variant="glass">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="w-6 h-6 text-primary" />
-              Grade {selectedGrade} Progress
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span>Problems Completed</span>
-                <span className="text-sm text-muted-foreground">
-                  {userProgress.filter(p => p.completed && problems.some(prob => prob.id === p.problem_id)).length}/{problems.length}
-                </span>
-              </div>
-              <Progress 
-                value={problems.length > 0 ? (userProgress.filter(p => p.completed && problems.some(prob => prob.id === p.problem_id)).length / problems.length) * 100 : 0}
-                className="h-3" 
-              />
-            </div>
-          </CardContent>
-        </Card>
+            {/* Overall Progress */}
+            <Card variant="glass">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Target className="w-6 h-6 text-primary" />
+                  Grade {selectedGrade} Progress
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span>Problems Completed</span>
+                    <span className="text-sm text-muted-foreground">
+                      {userProgress.filter(p => p.completed && problems.some(prob => prob.id === p.problem_id)).length}/{problems.length}
+                    </span>
+                  </div>
+                  <Progress 
+                    value={problems.length > 0 ? (userProgress.filter(p => p.completed && problems.some(prob => prob.id === p.problem_id)).length / problems.length) * 100 : 0}
+                    className="h-3" 
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
     </div>
   );
