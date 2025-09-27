@@ -3,9 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import RobotTeacher from "@/components/RobotTeacher";
 import Chatbot from "@/components/Chatbot";
-import { User, Target, LogOut, Trophy, Brain, Zap, BookOpen, Puzzle } from "lucide-react";
+import ProgressDashboard from "@/components/ProgressDashboard";
+import { User, Target, LogOut, Trophy, Brain, Zap, BookOpen, Puzzle, BarChart3 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthForm } from "@/components/AuthForm";
 
@@ -123,111 +125,131 @@ const Dashboard = () => {
           />
         </div>
 
-        {/* App Description */}
-        <Card variant="neon" className="mb-12 animate-fade-in">
-          <CardContent className="p-8 text-center">
-            <h2 className="text-2xl md:text-3xl font-bold mb-4 flex items-center justify-center gap-3">
-              <Brain className="w-8 h-8 text-primary" />
-              About AI BUDDY
-              <Zap className="w-8 h-8 text-accent" />
-            </h2>
-            <p className="text-lg text-muted-foreground max-w-4xl mx-auto leading-relaxed">
-              AI BUDDY is your personal AI teacher, guiding you through the exciting world of Artificial Intelligence with interactive lessons, quizzes, and fun challenges. Get ready to explore AI concepts tailored to your grade level, and ace your AI knowledge with quizzes designed for every level of expertise!
-            </p>
-          </CardContent>
-        </Card>
+        {/* Main Tabs */}
+        <Tabs defaultValue="learning" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-8">
+            <TabsTrigger value="learning" className="flex items-center gap-2">
+              <BookOpen className="w-4 h-4" />
+              Learning Hub
+            </TabsTrigger>
+            <TabsTrigger value="progress" className="flex items-center gap-2">
+              <BarChart3 className="w-4 h-4" />
+              My Progress
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Grades Grid */}
-        <div className="space-y-8">
-          <h2 className="text-2xl font-bold text-center text-foreground flex items-center justify-center gap-3">
-            <Trophy className="w-8 h-8 text-accent" />
-            Choose Your Grade Level
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {grades.map((gradeData) => (
-              <Card 
-                key={gradeData.grade}
-                variant="grade"
-                className={`cursor-pointer transition-all duration-300 ${
-                  selectedGrade === gradeData.grade ? 'ring-2 ring-primary shadow-glow' : ''
-                }`}
-                onClick={() => setSelectedGrade(selectedGrade === gradeData.grade ? null : gradeData.grade)}
-              >
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span className="text-xl font-bold">{gradeData.title}</span>
-                    <Badge variant="secondary" className="bg-primary/20 text-primary">
-                      Grade {gradeData.grade}
-                    </Badge>
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    {gradeData.description}
-                  </p>
-                </CardHeader>
-                
-                <CardContent className="space-y-4">
-                  {/* Grade-specific Robot Teacher */}
-                  <div className="flex justify-center mb-4">
-                    <div className="scale-75">
-                      <RobotTeacher 
-                        grade={gradeData.grade}
-                        lesson={`Hi! I'm your Grade ${gradeData.grade} AI teacher. Ready to explore ${gradeData.topics.join(', ')}? Click on me to learn more!`}
-                        isTeaching={false}
-                      />
-                    </div>
-                  </div>
-                  
-                  {/* Topics */}
-                  <div>
-                    <h4 className="text-sm font-semibold mb-2">Topics:</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {gradeData.topics.map((topic, index) => (
-                        <Badge key={index} variant="outline" className="text-xs">
-                          {topic}
+          <TabsContent value="learning" className="space-y-8">
+            {/* App Description */}
+            <Card variant="neon" className="animate-fade-in">
+              <CardContent className="p-8 text-center">
+                <h2 className="text-2xl md:text-3xl font-bold mb-4 flex items-center justify-center gap-3">
+                  <Brain className="w-8 h-8 text-primary" />
+                  About AI BUDDY
+                  <Zap className="w-8 h-8 text-accent" />
+                </h2>
+                <p className="text-lg text-muted-foreground max-w-4xl mx-auto leading-relaxed">
+                  AI BUDDY is your personal AI teacher, guiding you through the exciting world of Artificial Intelligence with interactive lessons, quizzes, and fun challenges. Get ready to explore AI concepts tailored to your grade level, and ace your AI knowledge with quizzes designed for every level of expertise!
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Grades Grid */}
+            <div className="space-y-8">
+              <h2 className="text-2xl font-bold text-center text-foreground flex items-center justify-center gap-3">
+                <Trophy className="w-8 h-8 text-accent" />
+                Choose Your Grade Level
+              </h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {grades.map((gradeData) => (
+                  <Card 
+                    key={gradeData.grade}
+                    variant="grade"
+                    className={`cursor-pointer transition-all duration-300 ${
+                      selectedGrade === gradeData.grade ? 'ring-2 ring-primary shadow-glow' : ''
+                    }`}
+                    onClick={() => setSelectedGrade(selectedGrade === gradeData.grade ? null : gradeData.grade)}
+                  >
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between">
+                        <span className="text-xl font-bold">{gradeData.title}</span>
+                        <Badge variant="secondary" className="bg-primary/20 text-primary">
+                          Grade {gradeData.grade}
                         </Badge>
-                      ))}
-                    </div>
-                  </div>
-                  
-                   {/* Grade Actions */}
-                   {selectedGrade === gradeData.grade && (
-                     <div className="space-y-3 animate-fade-in">
-                       <Button
-                         variant="neon"
-                         className="w-full gap-2"
-                         onClick={() => navigate(`/lessons/${gradeData.grade}`)}
-                       >
-                         <BookOpen className="w-4 h-4" />
-                         Start Lessons 📚
-                       </Button>
-                       
-                       <h4 className="text-sm font-semibold">Or Take Quiz:</h4>
-                       <div className="space-y-2">
-                         {difficultyLevels.map((level) => (
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground">
+                        {gradeData.description}
+                      </p>
+                    </CardHeader>
+                    
+                    <CardContent className="space-y-4">
+                      {/* Grade-specific Robot Teacher */}
+                      <div className="flex justify-center mb-4">
+                        <div className="scale-75">
+                          <RobotTeacher 
+                            grade={gradeData.grade}
+                            lesson={`Hi! I'm your Grade ${gradeData.grade} AI teacher. Ready to explore ${gradeData.topics.join(', ')}? Click on me to learn more!`}
+                            isTeaching={false}
+                          />
+                        </div>
+                      </div>
+                      
+                      {/* Topics */}
+                      <div>
+                        <h4 className="text-sm font-semibold mb-2">Topics:</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {gradeData.topics.map((topic, index) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              {topic}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                      
+                       {/* Grade Actions */}
+                       {selectedGrade === gradeData.grade && (
+                         <div className="space-y-3 animate-fade-in">
                            <Button
-                             key={level.name}
-                             variant="glass"
-                             className="w-full justify-start gap-3"
-                             onClick={() => navigate(`/quiz/${gradeData.grade}/${level.name}`)}
+                             variant="neon"
+                             className="w-full gap-2"
+                             onClick={() => navigate(`/lessons/${gradeData.grade}`)}
                            >
-                             <span className="text-lg">{level.icon}</span>
-                             <div className="text-left">
-                               <div className="font-medium">{level.name}</div>
-                               <div className="text-xs text-muted-foreground">
-                                 {level.description}
-                               </div>
-                             </div>
+                             <BookOpen className="w-4 h-4" />
+                             Start Lessons 📚
                            </Button>
-                         ))}
-                       </div>
-                     </div>
-                   )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
+                           
+                           <h4 className="text-sm font-semibold">Or Take Quiz:</h4>
+                           <div className="space-y-2">
+                             {difficultyLevels.map((level) => (
+                               <Button
+                                 key={level.name}
+                                 variant="glass"
+                                 className="w-full justify-start gap-3"
+                                 onClick={() => navigate(`/quiz/${gradeData.grade}/${level.name}`)}
+                               >
+                                 <span className="text-lg">{level.icon}</span>
+                                 <div className="text-left">
+                                   <div className="font-medium">{level.name}</div>
+                                   <div className="text-xs text-muted-foreground">
+                                     {level.description}
+                                   </div>
+                                 </div>
+                               </Button>
+                             ))}
+                           </div>
+                         </div>
+                       )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="progress">
+            <ProgressDashboard />
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Chatbot */}

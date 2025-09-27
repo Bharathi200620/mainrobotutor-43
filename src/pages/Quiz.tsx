@@ -5,12 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import RobotTeacher from "@/components/RobotTeacher";
+import { useProgressTracking } from "@/hooks/useProgressTracking";
 import { ArrowLeft, CheckCircle, XCircle, Trophy, Brain } from "lucide-react";
 import { quizData, Question } from "@/data/quizData";
 
 const Quiz = () => {
   const navigate = useNavigate();
   const { grade, difficulty } = useParams();
+  const { trackActivity } = useProgressTracking();
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [answers, setAnswers] = useState<number[]>([]);
@@ -52,6 +54,15 @@ const Quiz = () => {
         }, 0);
         setScore(finalScore);
         setQuizComplete(true);
+        
+        // Track quiz completion
+        trackActivity('quiz', `${quiz.grade}-${quiz.difficulty}`, {
+          grade: quiz.grade,
+          difficulty: quiz.difficulty,
+          status: 'completed',
+          score: Math.round((finalScore / quiz.questions.length) * 100),
+          maxScore: 100
+        });
       }
     }
   };

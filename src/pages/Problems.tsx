@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Target, BookOpen, Trophy, Clock, Brain, Send, Lightbulb } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useProgressTracking } from "@/hooks/useProgressTracking";
 import { useToast } from "@/hooks/use-toast";
 import { AuthForm } from "@/components/AuthForm";
 
@@ -34,6 +35,7 @@ interface UserProgress {
 const Problems = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  const { trackActivity } = useProgressTracking();
   const { toast } = useToast();
   const [problems, setProblems] = useState<SDGProblem[]>([]);
   const [userProgress, setUserProgress] = useState<UserProgress[]>([]);
@@ -127,6 +129,15 @@ Please provide detailed feedback on the student's solution and explain the corre
 
       const explanation = functionData?.response;
       setAiExplanation(explanation);
+
+      // Track problem completion with progress tracking
+      trackActivity('problem', selectedProblem.id, {
+        grade: selectedProblem.grade,
+        difficulty: selectedProblem.difficulty || 'medium',
+        status: 'completed',
+        score: 85,
+        maxScore: 100
+      });
 
       // Update user progress
       const { error: progressError } = await supabase

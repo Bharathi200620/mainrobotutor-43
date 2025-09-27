@@ -5,11 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import RobotTeacher from "@/components/RobotTeacher";
 import { getLessonsForGrade, Topic, Lesson } from "@/data/lessonsData";
+import { useProgressTracking } from "@/hooks/useProgressTracking";
 import { ArrowLeft, ArrowRight, BookOpen, Home, CheckCircle } from "lucide-react";
 
 const Lessons = () => {
   const { grade } = useParams();
   const navigate = useNavigate();
+  const { trackActivity, getActivityProgress } = useProgressTracking();
   const [currentTopicIndex, setCurrentTopicIndex] = useState(0);
   const [currentLessonIndex, setCurrentLessonIndex] = useState(0);
   const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set());
@@ -39,6 +41,15 @@ const Lessons = () => {
   const markLessonComplete = () => {
     const lessonKey = `${currentTopicIndex}-${currentLessonIndex}`;
     setCompletedLessons(prev => new Set([...prev, lessonKey]));
+    
+    // Track lesson completion
+    trackActivity('lesson', `${currentTopic.title}-${currentLesson.title}`, {
+      grade: gradeNumber,
+      topicId: currentTopic.id.toString(),
+      status: 'completed',
+      score: 100,
+      maxScore: 100
+    });
   };
 
   const goToNextLesson = () => {

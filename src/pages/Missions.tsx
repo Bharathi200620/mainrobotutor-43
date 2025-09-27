@@ -1,13 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { useProgressTracking } from "@/hooks/useProgressTracking";
 import { ArrowLeft, Target, Globe, Leaf, Heart, GraduationCap, Zap, Trophy } from "lucide-react";
 
 const Missions = () => {
   const navigate = useNavigate();
+  const { trackActivity } = useProgressTracking();
 
   const [sdgMissions, setSdgMissions] = useState([
     {
@@ -178,7 +180,15 @@ const Missions = () => {
                   <Button 
                     variant={mission.progress > 0 ? "neon" : "hero"} 
                     className="w-full"
-                    onClick={() => navigate("/dashboard")}
+                    onClick={() => {
+                      // Track mission start
+                      trackActivity('mission', mission.id.toString(), {
+                        status: mission.progress === 0 ? 'started' : 'in_progress',
+                        score: mission.progress,
+                        maxScore: 100
+                      });
+                      navigate("/dashboard");
+                    }}
                   >
                     {mission.progress === 100 ? "Mission Complete! 🏆" : 
                      mission.progress > 0 ? "Continue Mission" : "Start Mission"}

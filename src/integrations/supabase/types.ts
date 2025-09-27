@@ -199,6 +199,60 @@ export type Database = {
           },
         ]
       }
+      user_progress_tracking: {
+        Row: {
+          activity_id: string
+          activity_type: string
+          attempts: number | null
+          completed_at: string | null
+          created_at: string
+          difficulty: string | null
+          grade: number | null
+          id: string
+          max_score: number | null
+          score: number | null
+          status: string
+          time_spent: number | null
+          topic_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activity_id: string
+          activity_type: string
+          attempts?: number | null
+          completed_at?: string | null
+          created_at?: string
+          difficulty?: string | null
+          grade?: number | null
+          id?: string
+          max_score?: number | null
+          score?: number | null
+          status?: string
+          time_spent?: number | null
+          topic_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activity_id?: string
+          activity_type?: string
+          attempts?: number | null
+          completed_at?: string | null
+          created_at?: string
+          difficulty?: string | null
+          grade?: number | null
+          id?: string
+          max_score?: number | null
+          score?: number | null
+          status?: string
+          time_spent?: number | null
+          topic_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -225,6 +279,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_user_overall_progress: {
+        Args: { user_uuid: string }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
