@@ -9,6 +9,7 @@ import { ArrowLeft, Target, BookOpen, Trophy, Clock, Brain, Send, Lightbulb } fr
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useProgressTracking } from "@/hooks/useProgressTracking";
+import { useTimeTracking } from "@/hooks/useTimeTracking";
 import { useToast } from "@/hooks/use-toast";
 import { AuthForm } from "@/components/AuthForm";
 
@@ -45,6 +46,7 @@ const Problems = () => {
   const [userSolution, setUserSolution] = useState("");
   const [aiExplanation, setAiExplanation] = useState("");
   const [submittingAnswer, setSubmittingAnswer] = useState(false);
+  const { timeSpent } = useTimeTracking('problem', selectedProblem?.id || '', selectedProblem !== null);
 
   useEffect(() => {
     if (user) {
@@ -136,7 +138,8 @@ Please provide detailed feedback on the student's solution and explain the corre
         difficulty: selectedProblem.difficulty || 'medium',
         status: 'completed',
         score: 85,
-        maxScore: 100
+        maxScore: 100,
+        timeSpent
       });
 
       // Update user progress

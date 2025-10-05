@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import RobotTeacher from "@/components/RobotTeacher";
 import { getLessonsForGrade, Topic, Lesson } from "@/data/lessonsData";
 import { useProgressTracking } from "@/hooks/useProgressTracking";
+import { useTimeTracking } from "@/hooks/useTimeTracking";
 import { ArrowLeft, ArrowRight, BookOpen, Home, CheckCircle } from "lucide-react";
 
 const Lessons = () => {
@@ -18,6 +19,9 @@ const Lessons = () => {
 
   const gradeNumber = parseInt(grade || "6");
   const gradeLessons = getLessonsForGrade(gradeNumber);
+  const currentTopic = gradeLessons?.topics[currentTopicIndex];
+  const currentLesson = currentTopic?.lessons[currentLessonIndex];
+  const { timeSpent } = useTimeTracking('lesson', `${currentTopic?.title}-${currentLesson?.title}`, true);
 
   useEffect(() => {
     if (!gradeLessons) {
@@ -29,12 +33,11 @@ const Lessons = () => {
     return <div>Loading...</div>;
   }
 
-  const currentTopic: Topic = gradeLessons.topics[currentTopicIndex];
-  const currentLesson: Lesson = currentTopic.lessons[currentLessonIndex];
-  const isLastLessonInTopic = currentLessonIndex === currentTopic.lessons.length - 1;
-  const isLastTopic = currentTopicIndex === gradeLessons.topics.length - 1;
+  const isLastLessonInTopic = currentLessonIndex === (currentTopic?.lessons.length || 0) - 1;
+  const isLastTopic = currentTopicIndex === (gradeLessons?.topics.length || 0) - 1;
 
   const getLessonText = () => {
+    if (!currentLesson) return '';
     return `${currentLesson.title}\n\n${currentLesson.explanation}\n\nExample: ${currentLesson.example}`;
   };
 
@@ -43,13 +46,16 @@ const Lessons = () => {
     setCompletedLessons(prev => new Set([...prev, lessonKey]));
     
     // Track lesson completion
-    trackActivity('lesson', `${currentTopic.title}-${currentLesson.title}`, {
-      grade: gradeNumber,
-      topicId: currentTopic.id.toString(),
-      status: 'completed',
-      score: 100,
-      maxScore: 100
-    });
+    if (currentTopic && currentLesson) {
+      trackActivity('lesson', `${currentTopic.title}-${currentLesson.title}`, {
+        grade: gradeNumber,
+        topicId: currentTopic.id.toString(),
+        status: 'completed',
+        score: 100,
+        maxScore: 100,
+        timeSpent
+      });
+    }
   };
 
   const goToNextLesson = () => {

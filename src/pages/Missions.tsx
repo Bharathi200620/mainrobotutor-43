@@ -5,19 +5,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useProgressTracking } from "@/hooks/useProgressTracking";
+import { useTimeTracking } from "@/hooks/useTimeTracking";
 import { ArrowLeft, Target, Globe, Leaf, Heart, GraduationCap, Zap, Trophy } from "lucide-react";
+import { toast } from "sonner";
 
 const Missions = () => {
   const navigate = useNavigate();
-  const { trackActivity } = useProgressTracking();
+  const { trackActivity, getActivityProgress, activities } = useProgressTracking();
+  const [activeMissionId, setActiveMissionId] = useState<number | null>(null);
+  const { timeSpent } = useTimeTracking('mission', activeMissionId?.toString() || '', activeMissionId !== null);
 
-  const [sdgMissions, setSdgMissions] = useState([
+  const initialMissions = [
     {
       id: 1,
       title: "Quality Education with AI",
       icon: <GraduationCap className="w-6 h-6" />,
       description: "Learn how AI can improve education worldwide and complete related quizzes",
-      progress: 0,
       tasks: [
         { task: "Complete Grade 6 AI Basics", completed: false },
         { task: "Study AI in Education", completed: false },
@@ -32,7 +35,6 @@ const Missions = () => {
       title: "Good Health & AI Medicine",
       icon: <Heart className="w-6 h-6" />,
       description: "Explore how AI is revolutionizing healthcare and medical diagnosis",
-      progress: 0,
       tasks: [
         { task: "Learn about AI in Healthcare", completed: false },
         { task: "Study Medical AI Applications", completed: false },
@@ -47,7 +49,6 @@ const Missions = () => {
       title: "Climate Action with AI",
       icon: <Leaf className="w-6 h-6" />,
       description: "Discover how AI helps fight climate change and environmental challenges",
-      progress: 0,
       tasks: [
         { task: "Study AI for Climate", completed: false },
         { task: "Learn Environmental AI", completed: false },
@@ -62,7 +63,6 @@ const Missions = () => {
       title: "Innovation & AI Infrastructure",
       icon: <Zap className="w-6 h-6" />,
       description: "Build knowledge about AI infrastructure and technological innovation",
-      progress: 0,
       tasks: [
         { task: "Complete Neural Networks", completed: false },
         { task: "Study AI Infrastructure", completed: false },
@@ -77,7 +77,6 @@ const Missions = () => {
       title: "Responsible AI for All",
       icon: <Globe className="w-6 h-6" />,
       description: "Understand AI ethics, bias, and creating inclusive AI systems",
-      progress: 0,
       tasks: [
         { task: "AI Ethics Introduction", completed: false },
         { task: "Study AI Bias", completed: false },
@@ -87,7 +86,89 @@ const Missions = () => {
       points: 500,
       color: "from-purple-500 to-indigo-500",
     },
-  ]);
+  ];
+
+  const [sdgMissions, setSdgMissions] = useState(() => {
+    return initialMissions.map(mission => {
+      const progress = getActivityProgress('mission', mission.id.toString());
+      const completedTasks = progress ? Math.floor((progress.score / 100) * mission.tasks.length) : 0;
+      
+      return {
+        ...mission,
+        progress: progress?.score || 0,
+        tasks: mission.tasks.map((task, index) => ({
+          ...task,
+          completed: index < completedTasks
+        }))
+      };
+    });
+  });
+
+  useEffect(() => {
+    // Update missions from progress data
+    setSdgMissions(prevMissions => 
+      prevMissions.map(mission => {
+        const progress = getActivityProgress('mission', mission.id.toString());
+        const completedTasks = progress ? Math.floor((progress.score / 100) * mission.tasks.length) : 0;
+        
+        return {
+          ...mission,
+          progress: progress?.score || 0,
+          tasks: mission.tasks.map((task, index) => ({
+            ...task,
+            completed: index < completedTasks
+          }))
+        };
+      })
+    );
+  }, [activities]);
+
+  const toggleTask = async (missionId: number, taskIndex: number) => {
+    setSdgMissions(prevMissions => {
+      const updatedMissions = prevMissions.map(mission => {
+        if (mission.id === missionId) {
+          const updatedTasks = mission.tasks.map((task, index) => 
+            index === taskIndex ? { ...task, completed: !task.completed } : task
+          );
+          const completedCount = updatedTasks.filter(t => t.completed).length;
+          const progressPercentage = Math.round((completedCount / updatedTasks.length) * 100);
+          const status = progressPercentage === 100 ? 'completed' : progressPercentage > 0 ? 'in_progress' : 'started';
+          
+          // Track the activity
+          trackActivity('mission', missionId.toString(), {
+            status,
+            score: progressPercentage,
+            maxScore: 100,
+            timeSpent
+          });
+
+          if (progressPercentage === 100) {
+            toast.success(`🏆 Mission Complete! You earned ${mission.points} points!`);
+            setActiveMissionId(null);
+          }
+          
+          return {
+            ...mission,
+            tasks: updatedTasks,
+            progress: progressPercentage
+          };
+        }
+        return mission;
+      });
+      return updatedMissions;
+    });
+  };
+
+  const startMission = (missionId: number) => {
+    setActiveMissionId(missionId);
+    trackActivity('mission', missionId.toString(), {
+      status: 'started',
+      score: 0,
+      maxScore: 100,
+      timeSpent: 0
+    });
+    toast.success("Mission started! Complete tasks to track your progress.");
+  };
 
   return (
     <div className="min-h-screen bg-gradient-cosmic tech-grid">
@@ -159,7 +240,11 @@ const Missions = () => {
                   <h4 className="text-sm font-semibold">Mission Tasks:</h4>
                   <div className="space-y-2">
                     {mission.tasks.map((task, index) => (
-                      <div key={index} className="flex items-center gap-3 text-sm">
+                      <div 
+                        key={index} 
+                        className="flex items-center gap-3 text-sm cursor-pointer hover:bg-accent/10 p-2 rounded transition-colors"
+                        onClick={() => toggleTask(mission.id, index)}
+                      >
                         <div className={`w-4 h-4 rounded-full flex items-center justify-center text-xs ${
                           task.completed 
                             ? 'bg-accent text-background' 
@@ -177,22 +262,23 @@ const Missions = () => {
 
                 {/* Action Button */}
                 <div className="pt-2">
-                  <Button 
-                    variant={mission.progress > 0 ? "neon" : "hero"} 
-                    className="w-full"
-                    onClick={() => {
-                      // Track mission start
-                      trackActivity('mission', mission.id.toString(), {
-                        status: mission.progress === 0 ? 'started' : 'in_progress',
-                        score: mission.progress,
-                        maxScore: 100
-                      });
-                      navigate("/dashboard");
-                    }}
-                  >
-                    {mission.progress === 100 ? "Mission Complete! 🏆" : 
-                     mission.progress > 0 ? "Continue Mission" : "Start Mission"}
-                  </Button>
+                  {mission.progress === 100 ? (
+                    <Button 
+                      variant="neon" 
+                      className="w-full"
+                      disabled
+                    >
+                      Mission Complete! 🏆
+                    </Button>
+                  ) : (
+                    <Button 
+                      variant={mission.progress > 0 ? "neon" : "hero"} 
+                      className="w-full"
+                      onClick={() => startMission(mission.id)}
+                    >
+                      {mission.progress > 0 ? "Continue Mission" : "Start Mission"}
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>

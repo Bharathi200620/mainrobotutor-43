@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import RobotTeacher from "@/components/RobotTeacher";
 import { useProgressTracking } from "@/hooks/useProgressTracking";
+import { useTimeTracking } from "@/hooks/useTimeTracking";
 import { ArrowLeft, CheckCircle, XCircle, Trophy, Brain } from "lucide-react";
 import { quizData, Question } from "@/data/quizData";
 
@@ -13,16 +14,16 @@ const Quiz = () => {
   const navigate = useNavigate();
   const { grade, difficulty } = useParams();
   const { trackActivity } = useProgressTracking();
+  const quiz = quizData.find(
+    q => q.grade === parseInt(grade || "6") && q.difficulty === difficulty
+  );
+  const { timeSpent } = useTimeTracking('quiz', `${grade}-${difficulty}`, true);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [answers, setAnswers] = useState<number[]>([]);
   const [showResult, setShowResult] = useState(false);
   const [quizComplete, setQuizComplete] = useState(false);
   const [score, setScore] = useState(0);
-
-  const quiz = quizData.find(
-    q => q.grade === parseInt(grade || "6") && q.difficulty === difficulty
-  );
 
   useEffect(() => {
     if (!quiz) {
@@ -61,7 +62,8 @@ const Quiz = () => {
           difficulty: quiz.difficulty,
           status: 'completed',
           score: Math.round((finalScore / quiz.questions.length) * 100),
-          maxScore: 100
+          maxScore: 100,
+          timeSpent
         });
       }
     }
