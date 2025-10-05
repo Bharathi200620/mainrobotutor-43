@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import RobotTeacher from "@/components/RobotTeacher";
 import { useProgressTracking } from "@/hooks/useProgressTracking";
 import { useTimeTracking } from "@/hooks/useTimeTracking";
+import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, CheckCircle, XCircle, Trophy, Brain } from "lucide-react";
 import { quizData, Question } from "@/data/quizData";
 
@@ -14,6 +15,7 @@ const Quiz = () => {
   const navigate = useNavigate();
   const { grade, difficulty } = useParams();
   const { trackActivity } = useProgressTracking();
+  const { toast } = useToast();
   const quiz = quizData.find(
     q => q.grade === parseInt(grade || "6") && q.difficulty === difficulty
   );
@@ -36,7 +38,29 @@ const Quiz = () => {
   }
 
   const handleAnswerSelect = (answerIndex: number) => {
+    if (showResult) return; // Prevent changing answer after showing result
     setSelectedAnswer(answerIndex);
+    // Automatically show result when answer is selected
+    setTimeout(() => {
+      setShowResult(true);
+      
+      // Show toast notification for wrong answer
+      if (answerIndex !== currentQ.correctAnswer) {
+        const correctOption = currentQ.options[currentQ.correctAnswer];
+        toast({
+          title: "❌ Incorrect Answer",
+          description: `The correct answer is: ${correctOption}`,
+          variant: "destructive",
+          duration: 5000,
+        });
+      } else {
+        toast({
+          title: "✅ Correct!",
+          description: "Great job! You got it right!",
+          duration: 3000,
+        });
+      }
+    }, 100);
   };
 
   const handleNextQuestion = () => {
@@ -70,7 +94,20 @@ const Quiz = () => {
   };
 
   const showAnswer = () => {
-    setShowResult(true);
+    if (!showResult) {
+      setShowResult(true);
+      
+      // Show toast notification
+      if (selectedAnswer !== null && selectedAnswer !== currentQ.correctAnswer) {
+        const correctOption = currentQ.options[currentQ.correctAnswer];
+        toast({
+          title: "❌ Incorrect Answer",
+          description: `The correct answer is: ${correctOption}`,
+          variant: "destructive",
+          duration: 5000,
+        });
+      }
+    }
   };
 
   const restartQuiz = () => {
@@ -282,34 +319,14 @@ const Quiz = () => {
 
             {/* Action Buttons */}
             <div className="flex gap-4 pt-4">
-              {!showResult ? (
-                <>
-                  <Button
-                    onClick={showAnswer}
-                    disabled={selectedAnswer === null}
-                    variant="glass"
-                    className="flex-1"
-                  >
-                    Show Answer
-                  </Button>
-                  <Button
-                    onClick={handleNextQuestion}
-                    disabled={selectedAnswer === null}
-                    variant="hero"
-                    className="flex-1"
-                  >
-                    {currentQuestion === quiz.questions.length - 1 ? "Finish Quiz" : "Next Question"}
-                  </Button>
-                </>
-              ) : (
-                <Button
-                  onClick={handleNextQuestion}
-                  variant="hero"
-                  className="w-full"
-                >
-                  {currentQuestion === quiz.questions.length - 1 ? "Complete Quiz" : "Next Question"}
-                </Button>
-              )}
+              <Button
+                onClick={handleNextQuestion}
+                disabled={selectedAnswer === null}
+                variant="hero"
+                className="w-full"
+              >
+                {currentQuestion === quiz.questions.length - 1 ? "Complete Quiz" : "Next Question"}
+              </Button>
             </div>
           </CardContent>
         </Card>

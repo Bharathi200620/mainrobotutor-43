@@ -52,8 +52,13 @@ const ProgressDashboard = () => {
     }
   };
 
-  const formatTimeSpent = (minutes: number) => {
-    if (minutes < 60) return `${minutes}m`;
+  const formatTimeSpent = (seconds: number) => {
+    if (seconds === 0) return '0m';
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    if (minutes < 60) {
+      return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
+    }
     const hours = Math.floor(minutes / 60);
     const remainingMinutes = minutes % 60;
     return `${hours}h ${remainingMinutes}m`;
