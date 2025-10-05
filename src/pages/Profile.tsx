@@ -6,9 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Trophy, Star, Brain, Zap, Target, User, Phone, School, GraduationCap, Mail } from "lucide-react";
+import { ArrowLeft, Trophy, Star, Brain, Zap, Target, User, Phone, School, GraduationCap, Mail, BookOpen, Award } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useProgressTracking } from "@/hooks/useProgressTracking";
 import { useToast } from "@/hooks/use-toast";
 import { AuthForm } from "@/components/AuthForm";
 
@@ -16,6 +17,7 @@ const Profile = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
+  const { activities, getGradeProgress, getActivityTypeProgress } = useProgressTracking();
   const [loading, setLoading] = useState(false);
   const [profileData, setProfileData] = useState({
     name: "",
@@ -35,21 +37,22 @@ const Profile = () => {
     badges: [],
   });
 
-  const [gradeProgress, setGradeProgress] = useState([
-    { grade: 6, completed: 0, total: 0, percentage: 0 },
-    { grade: 7, completed: 0, total: 0, percentage: 0 },
-    { grade: 8, completed: 0, total: 0, percentage: 0 },
-    { grade: 9, completed: 0, total: 0, percentage: 0 },
-    { grade: 10, completed: 0, total: 0, percentage: 0 },
-  ]);
+  const [gradeProgress, setGradeProgress] = useState<{
+    grade: number;
+    lessons: { completed: number; total: number; percentage: number };
+    quizzes: { completed: number; total: number; percentage: number };
+    problems: { completed: number; total: number; percentage: number };
+  }[]>([]);
 
   useEffect(() => {
     if (user) {
       loadUserProfile();
       loadUserProgress();
       loadUserBadges();
+      calculateGradeProgress();
+      checkAndAwardBadges();
     }
-  }, [user]);
+  }, [user, activities]);
 
   const loadUserProfile = async () => {
     try {
@@ -81,44 +84,124 @@ const Profile = () => {
     }
   };
 
-  const loadUserProgress = async () => {
+  const calculateGradeProgress = () => {
+    const grades = [6, 7, 8, 9, 10];
+    const progressByGrade = grades.map(grade => {
+      const gradeActivities = activities.filter(a => a.grade === grade);
+      
+      const lessons = gradeActivities.filter(a => a.activity_type === 'lesson');
+      const lessonsCompleted = lessons.filter(a => a.status === 'completed').length;
+      
+      const quizzes = gradeActivities.filter(a => a.activity_type === 'quiz');
+      const quizzesCompleted = quizzes.filter(a => a.status === 'completed').length;
+      
+      const problems = gradeActivities.filter(a => a.activity_type === 'problem');
+      const problemsCompleted = problems.filter(a => a.status === 'completed').length;
+      
+      return {
+        grade,
+        lessons: {
+          completed: lessonsCompleted,
+          total: lessons.length,
+          percentage: lessons.length > 0 ? Math.round((lessonsCompleted / lessons.length) * 100) : 0
+        },
+        quizzes: {
+          completed: quizzesCompleted,
+          total: quizzes.length,
+          percentage: quizzes.length > 0 ? Math.round((quizzesCompleted / quizzes.length) * 100) : 0
+        },
+        problems: {
+          completed: problemsCompleted,
+          total: problems.length,
+          percentage: problems.length > 0 ? Math.round((problemsCompleted / problems.length) * 100) : 0
+        }
+      };
+    });
+    
+    setGradeProgress(progressByGrade);
+  };
+
+  const loadUserProgress = () => {
+    const quizProgress = getActivityTypeProgress('quiz');
+    const lessonProgress = getActivityTypeProgress('lesson');
+    
+    setUserStats(prev => ({
+      ...prev,
+      totalQuizzes: quizProgress.completed,
+      correctAnswers: quizProgress.averageScore,
+      totalQuestions: quizProgress.total * 10, // Estimate
+    }));
+  };
+
+  const checkAndAwardBadges = async () => {
+    if (!user) return;
+    
+    const lessonProgress = getActivityTypeProgress('lesson');
+    const quizProgress = getActivityTypeProgress('quiz');
+    const problemProgress = getActivityTypeProgress('problem');
+    const missionProgress = getActivityTypeProgress('mission');
+    
+    const badgesToAward = [];
+    
+    // Lesson badges
+    if (lessonProgress.completed >= 1 && lessonProgress.completed < 5) {
+      badgesToAward.push({ name: "First Steps", icon: "🎯", description: "Completed your first lesson!" });
+    }
+    if (lessonProgress.completed >= 5) {
+      badgesToAward.push({ name: "Knowledge Seeker", icon: "📚", description: "Completed 5 lessons!" });
+    }
+    if (lessonProgress.completed >= 10) {
+      badgesToAward.push({ name: "Learning Master", icon: "🎓", description: "Completed 10 lessons!" });
+    }
+    
+    // Quiz badges
+    if (quizProgress.completed >= 1 && quizProgress.completed < 5) {
+      badgesToAward.push({ name: "Quiz Taker", icon: "🧠", description: "Completed your first quiz!" });
+    }
+    if (quizProgress.completed >= 5) {
+      badgesToAward.push({ name: "Brain Power", icon: "💡", description: "Completed 5 quizzes!" });
+    }
+    if (quizProgress.averageScore >= 80 && quizProgress.completed >= 3) {
+      badgesToAward.push({ name: "High Achiever", icon: "⭐", description: "Scored 80%+ average!" });
+    }
+    
+    // Problem badges
+    if (problemProgress.completed >= 1) {
+      badgesToAward.push({ name: "Problem Solver", icon: "🔧", description: "Solved your first problem!" });
+    }
+    if (problemProgress.completed >= 5) {
+      badgesToAward.push({ name: "SDG Champion", icon: "🌍", description: "Solved 5 SDG problems!" });
+    }
+    
+    // Mission badges
+    if (missionProgress.completed >= 1) {
+      badgesToAward.push({ name: "Mission Starter", icon: "🚀", description: "Completed your first mission!" });
+    }
+    if (missionProgress.completed >= 3) {
+      badgesToAward.push({ name: "Mission Expert", icon: "🏆", description: "Completed 3 missions!" });
+    }
+    
+    // Award badges that don't exist yet
     try {
-      // Get total progress stats
-      const { data: progressData, error: progressError } = await supabase
-        .from('user_progress')
-        .select('*, sdg_problems(grade)')
-        .eq('user_id', user?.id);
-
-      if (progressError) throw progressError;
-
-      // Calculate stats
-      const completedQuizzes = progressData?.filter(p => p.completed).length || 0;
-      const totalAttempts = progressData?.reduce((sum, p) => sum + p.attempts, 0) || 0;
-      const correctAnswers = progressData?.reduce((sum, p) => sum + p.score, 0) || 0;
-
-      setUserStats(prev => ({
-        ...prev,
-        totalQuizzes: completedQuizzes,
-        correctAnswers,
-        totalQuestions: totalAttempts,
-      }));
-
-      // Calculate grade-wise progress
-      const gradeStats = [6, 7, 8, 9, 10].map(grade => {
-        const gradeProblems = progressData?.filter(p => p.sdg_problems?.grade === grade) || [];
-        const completed = gradeProblems.filter(p => p.completed).length;
-        const total = gradeProblems.length;
-        return {
-          grade,
-          completed,
-          total,
-          percentage: total > 0 ? Math.round((completed / total) * 100) : 0
-        };
-      });
-
-      setGradeProgress(gradeStats);
+      const { data: existingBadges } = await supabase
+        .from('user_badges')
+        .select('badge_name')
+        .eq('user_id', user.id);
+      
+      const existingBadgeNames = existingBadges?.map(b => b.badge_name) || [];
+      
+      for (const badge of badgesToAward) {
+        if (!existingBadgeNames.includes(badge.name)) {
+          await supabase.from('user_badges').insert({
+            user_id: user.id,
+            badge_name: badge.name,
+            badge_icon: badge.icon,
+            badge_description: badge.description
+          });
+        }
+      }
     } catch (error) {
-      console.error('Error loading progress:', error);
+      console.error('Error awarding badges:', error);
     }
   };
 
@@ -127,7 +210,8 @@ const Profile = () => {
       const { data, error } = await supabase
         .from('user_badges')
         .select('*')
-        .eq('user_id', user?.id);
+        .eq('user_id', user?.id)
+        .order('earned_at', { ascending: false });
 
       if (error) throw error;
 
@@ -379,50 +463,96 @@ const Profile = () => {
         <Card variant="glass">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Brain className="w-6 h-6 text-primary" />
+              <GraduationCap className="w-6 h-6 text-primary" />
               Learning Progress by Grade
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
             {gradeProgress.map((grade) => (
-              <div key={grade.grade} className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">Grade {grade.grade}</span>
-                  <span className="text-sm text-muted-foreground">
-                    {grade.completed}/{grade.total} quizzes
-                  </span>
+              <div key={grade.grade} className="space-y-3 p-4 rounded-lg bg-muted/20 border border-primary/10">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-bold text-lg">Grade {grade.grade}</span>
+                  <Badge variant="outline" className="gap-1">
+                    <Trophy className="w-3 h-3" />
+                    {grade.lessons.completed + grade.quizzes.completed + grade.problems.completed} completed
+                  </Badge>
                 </div>
-                <Progress value={grade.percentage} className="h-2" />
+                
+                {/* Lessons Progress */}
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="flex items-center gap-2">
+                      <BookOpen className="w-4 h-4 text-blue-500" />
+                      Lessons
+                    </span>
+                    <span className="text-muted-foreground">
+                      {grade.lessons.completed}/{grade.lessons.total}
+                    </span>
+                  </div>
+                  <Progress value={grade.lessons.percentage} className="h-2" />
+                </div>
+
+                {/* Quizzes Progress */}
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="flex items-center gap-2">
+                      <Brain className="w-4 h-4 text-purple-500" />
+                      Quizzes
+                    </span>
+                    <span className="text-muted-foreground">
+                      {grade.quizzes.completed}/{grade.quizzes.total}
+                    </span>
+                  </div>
+                  <Progress value={grade.quizzes.percentage} className="h-2" />
+                </div>
+
+                {/* Problems Progress */}
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="flex items-center gap-2">
+                      <Target className="w-4 h-4 text-green-500" />
+                      Problems
+                    </span>
+                    <span className="text-muted-foreground">
+                      {grade.problems.completed}/{grade.problems.total}
+                    </span>
+                  </div>
+                  <Progress value={grade.problems.percentage} className="h-2" />
+                </div>
               </div>
             ))}
           </CardContent>
         </Card>
 
         {/* Achievements */}
-        <Card variant="glass">
+        <Card variant="neon">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Trophy className="w-6 h-6 text-accent" />
+              <Award className="w-6 h-6 text-accent" />
               Achievements & Badges
             </CardTitle>
           </CardHeader>
           <CardContent>
             {userStats.badges.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {userStats.badges.map((badge, index) => (
-                  <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-muted/20 border border-primary/20">
-                    <span className="text-2xl">{badge.icon}</span>
+                  <div 
+                    key={index} 
+                    className="flex items-center gap-3 p-4 rounded-lg bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/20 hover:border-accent/40 transition-all hover:shadow-glow"
+                  >
+                    <span className="text-3xl">{badge.icon}</span>
                     <div>
-                      <div className="font-medium">{badge.name}</div>
-                      <div className="text-sm text-muted-foreground">{badge.description}</div>
+                      <div className="font-bold text-base">{badge.name}</div>
+                      <div className="text-xs text-muted-foreground">{badge.description}</div>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Trophy className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Start completing quizzes to earn your first badges! 🌟</p>
+              <div className="text-center py-12 text-muted-foreground">
+                <Award className="w-16 h-16 mx-auto mb-4 opacity-30" />
+                <p className="text-lg font-semibold mb-2">No badges yet!</p>
+                <p className="text-sm">Complete lessons, quizzes, and problems to earn amazing badges! 🌟</p>
               </div>
             )}
           </CardContent>
